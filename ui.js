@@ -337,6 +337,10 @@ function init() {
   // Auto-create first doc if none exist
   if (State.docs.length === 0) {
     State.createDoc();
+  } 
+  // If docs exist but none are active (or activeId is invalid), activate the first one.
+  else if (!State.appState.docId || !State.docs.find(d => d.id === State.appState.docId)) {
+    State.selectDoc(State.docs[0].id);
   }
   
   // Attach all event listeners
