@@ -409,3 +409,96 @@ exportBtn && exportBtn.addEventListener('click', () => {
 // - If active doc is not restored, check appState.docId and docs array. 
 // - If download does not start, check browser download settings and pop-up blockers.
 // - If file is empty, check docs array and JSON.stringify logic. 
+
+// --- Timer Logic and Lock Enforcement ---
+let timerInterval = null;
+let timerPaused = false;
+
+// Format ms as mm:ss
+function formatMs(ms) {
+  const m = Math.floor(ms / 60000);
+  const s = Math.floor((ms % 60000) / 1000);
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+// Update the timer display
+function updateTimerUI() {
+  const doc = docs.find(d => d.id === appState.docId);
+  const timerSpan = document.getElementById('timer');
+  if (!doc || !timerSpan) return;
+  timerSpan.textContent = formatMs(doc.remainingMs || 0);
+  // Set color to green if lock expired
+  if (doc.lockActive === false) {
+    timerSpan.style.color = 'green';
+  } else {
+    timerSpan.style.color = '';
+  }
+}
+
+// Start the timer interval
+function startTimer() {
+  clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    const doc = docs.find(d => d.id === appState.docId);
+    if (!doc || !doc.lockActive || timerPaused) return;
+    const now = Date.now();
+    const end = doc.writeLockStarted + 300000;
+    doc.remainingMs = Math.max(0, end - now);
+    if (doc.remainingMs === 0) {
+      doc.lockActive = false;
+      saveState();
+      updateTimerUI();
+      clearInterval(timerInterval);
+      renderModeButtons();
+      return;
+    }
+    saveState();
+    updateTimerUI();
+  }, 500);
+}
+
+// --- Patch renderActiveDoc to start timer and update UI ---
+const origRenderActiveDoc3 = renderActiveDoc;
+renderActiveDoc = function() {
+  origRenderActiveDoc3();
+  startTimer();
+  updateTimerUI();
+  renderModeButtons && renderModeButtons();
+};
+
+// --- Patch doc select and doc create to start timer ---
+// Already handled by renderActiveDoc above
+
+// --- Patch renderModeButtons to disable Edit if lockActive ---
+function renderModeButtons() {
+  const doc = docs.find(d => d.id === appState.docId);
+  if (!doc) return;
+  if (doc.mode === 'write') {
+    writeBtn.classList.add('active');
+    editBtn.classList.remove('active');
+    editor.classList.remove('edit-mode');
+    editor.classList.add('write-mode');
+  } else {
+    writeBtn.classList.remove('active');
+    editBtn.classList.add('active');
+    editor.classList.remove('write-mode');
+    editor.classList.add('edit-mode');
+  }
+  // Disable Edit button if lockActive
+  if (doc.lockActive) {
+    editBtn.disabled = true;
+    editBtn.title = 'Edit unlocks after 5:00';
+  } else {
+    editBtn.disabled = false;
+    editBtn.title = '';
+  }
+}
+
+// --- Patch Edit button handler to enforce lock ---
+editBtn && editBtn.addEventListener('click', () => {
+  const doc = docs.find(d => d.id === appState.docId);
+  if (!doc || doc.lockActive) return;
+  if (doc.mode !== 'edit') {
+    showEditModal();
+  }
+}); 
