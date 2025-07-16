@@ -315,6 +315,9 @@ function handleVisibilityChange() {
     if (doc.lockActive) {
       const remaining = doc.remainingMs || 0;
       doc.writeLockStarted = Date.now() - (300000 - remaining);
+      // CRITICAL FIX: Save the updated state immediately after adjusting the start time.
+      // This prevents a race condition on page reload after tab visibility changes.
+      State.saveDocs();
       startTimer();
     }
   }
