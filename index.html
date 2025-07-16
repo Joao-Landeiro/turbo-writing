@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>No Bullshit Writer</title>
+  <!-- Bootstrap 5.3 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Custom styles -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Main container: Bootstrap grid -->
+  <div class="container-fluid vh-100">
+    <div class="row h-100">
+      <!-- Sidebar (20%) -->
+      <nav id="sidebar" class="col-12 col-md-3 col-lg-2 d-flex flex-column bg-light p-0 h-100 border-end">
+        <!-- New Doc Button -->
+        <button id="new-doc-btn" class="btn btn-primary m-3" type="button">+ New</button>
+        <!-- Docs List -->
+        <ul id="docs-list" class="list-group list-group-flush flex-grow-1 overflow-auto mb-2" aria-label="Document list">
+          <!-- Doc items will be rendered here -->
+        </ul>
+        <!-- Sidebar Footer: Export JSON -->
+        <div class="mt-auto p-3 border-top">
+          <button id="export-json-btn" class="btn btn-outline-secondary w-100" type="button">Export JSON</button>
+        </div>
+      </nav>
+      <!-- Main Area (80%) -->
+      <main id="main-area" class="col-12 col-md-9 col-lg-10 d-flex flex-column align-items-center justify-content-start p-4">
+        <!-- Editor Card -->
+        <div class="card w-100" style="max-width: 800px;">
+          <div class="card-body d-flex flex-column">
+            <!-- Textarea for writing -->
+            <textarea id="editor" class="form-control mb-3" rows="12" placeholder="Start writing..." aria-label="Document editor"></textarea>
+            <!-- Toolbar: Write/Edit toggle and Timer -->
+            <div class="d-flex align-items-center justify-content-between">
+              <div>
+                <button id="write-mode-btn" class="btn btn-outline-dark me-2" type="button">Write</button>
+                <button id="edit-mode-btn" class="btn btn-outline-success" type="button">Edit</button>
+              </div>
+              <div id="timer-container" class="d-flex align-items-center">
+                <span id="timer" class="fw-bold">05:00</span>
+                <!-- Optional: progress ring can be added here later -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <!-- Edit Confirmation Modal (hidden by default) -->
+  <div id="edit-modal" class="modal fade" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="editModalLabel">Confirm Edit Mode</h5>
+        </div>
+        <div class="modal-body">
+          <p id="edit-phrase" class="fw-bold text-center mb-3">[Phrase will appear here]</p>
+          <input id="edit-phrase-input" type="text" class="form-control" placeholder="Type the phrase exactly" aria-label="Edit confirmation input" autocomplete="off">
+        </div>
+        <div class="modal-footer">
+          <button id="edit-confirm-btn" type="button" class="btn btn-success" disabled>Confirm</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Bootstrap JS Bundle (with Popper) -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- App entrypoint -->
+  <script type="module" src="app.js"></script>
+</body>
+</html> 
