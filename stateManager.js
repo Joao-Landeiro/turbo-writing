@@ -86,6 +86,14 @@ export function selectDoc(docId) {
   return false;
 }
 
+/**
+ * Saves ONLY the docs array to localStorage.
+ * Used for frequent updates like typing or timer ticks, to avoid overwriting global app state.
+ */
+export function saveDocs() {
+  localStorage.setItem(DOCS_KEY, JSON.stringify(docs));
+}
+
 // --- Save all docs and app state to localStorage ---
 export function saveState() {
   localStorage.setItem(DOCS_KEY, JSON.stringify(docs));

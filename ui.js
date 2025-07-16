@@ -168,7 +168,7 @@ function startTimer() {
       renderModeUI();
     }
     
-    State.saveState();
+    State.saveDocs();
     updateTimerUI();
   }, 500);
 }
@@ -217,7 +217,7 @@ function handleEditorInput() {
   }
   
   doc.updated = Date.now();
-  State.saveState();
+  State.saveDocs();
 }
 
 /**
