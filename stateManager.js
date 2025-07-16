@@ -87,6 +87,32 @@ export function selectDoc(docId) {
 }
 
 /**
+ * Deletes a document by its ID.
+ * After deletion, it activates the next available document or creates a new one if none are left.
+ * @param {string} docId The ID of the document to delete.
+ */
+export function deleteDoc(docId) {
+  const docIndex = docs.findIndex(d => d.id === docId);
+  if (docIndex === -1) return;
+
+  docs.splice(docIndex, 1);
+
+  // If the deleted doc was the active one, select a new one
+  if (appState.docId === docId) {
+    if (docs.length > 0) {
+      // Activate the next doc in the list, or the previous one if it was the last
+      const newIndex = Math.max(0, docIndex - 1);
+      selectDoc(docs[newIndex].id);
+    } else {
+      // If no docs are left, create a new one
+      createDoc();
+    }
+  }
+
+  saveState();
+}
+
+/**
  * Saves ONLY the docs array to localStorage.
  * Used for frequent updates like typing or timer ticks, to avoid overwriting global app state.
  */

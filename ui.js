@@ -17,6 +17,8 @@ const editPhraseElem = get('edit-phrase');
 const editPhraseInput = get('edit-phrase-input');
 const editConfirmBtn = get('edit-confirm-btn');
 const timerSpan = get('timer');
+const timerLabel = get('timer-label');
+const deleteBtn = get('delete-doc-btn');
 
 // --- Timer State ---
 let timerInterval = null;
@@ -139,6 +141,7 @@ function updateTimerUI() {
 
   timerSpan.textContent = formatMs(doc.remainingMs);
   timerSpan.style.color = doc.lockActive ? '' : 'green';
+  timerLabel.style.display = doc.lockActive ? 'inline' : 'none';
 }
 
 /**
@@ -350,6 +353,18 @@ function init() {
   
   docsList.addEventListener('click', handleSidebarClick);
   
+  deleteBtn.addEventListener('click', () => {
+    const doc = State.docs.find(d => d.id === State.appState.docId);
+    if (!doc) return;
+
+    // Use a confirmation prompt before deleting
+    if (window.confirm(`Are you sure you want to delete the document "${doc.title || 'Untitled'}"? This cannot be undone.`)) {
+      State.deleteDoc(doc.id);
+      renderDocsList();
+      renderActiveDoc();
+    }
+  });
+
   document.addEventListener('visibilitychange', handleVisibilityChange);
   
   newBtn.addEventListener('click', () => {

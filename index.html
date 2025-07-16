@@ -15,6 +15,8 @@
     <div class="row h-100">
       <!-- Sidebar (20%) -->
       <nav id="sidebar" class="col-12 col-md-3 col-lg-2 d-flex flex-column bg-light p-0 h-100 border-end">
+        <!-- App Title -->
+        <h4 class="m-3 fw-bold">No Bullshit<br>Writer</h4>
         <!-- New Doc Button -->
         <button id="new-doc-btn" class="btn btn-primary m-3" type="button">+ New</button>
         <!-- Docs List -->
@@ -40,9 +42,11 @@
                 <button id="edit-mode-btn" class="btn btn-outline-success" type="button">Edit</button>
               </div>
               <div id="timer-container" class="d-flex align-items-center">
+                <span class="text-muted me-2" id="timer-label">Time until Edit available:</span>
                 <span id="timer" class="fw-bold">05:00</span>
-                <!-- Optional: progress ring can be added here later -->
               </div>
+              <!-- Delete Button -->
+              <button id="delete-doc-btn" class="btn btn-outline-danger ms-auto" type="button">Delete Document</button>
             </div>
           </div>
         </div>
