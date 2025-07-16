@@ -1,43 +1,28 @@
 // ui.js
-// Handles UI rendering and DOM event handling for No Bullshit Writer
-// Implements Write mode core logic: state load, doc rendering, destructive key blocking, red flash
+// Handles all UI rendering and DOM event handling for No Bullshit Writer
 
-import { docs, appState, createDoc, loadState, saveState } from './stateManager.js';
+import * as State from './stateManager.js';
 
 // --- DOM Elements ---
-const editor = document.getElementById('editor');
-const sidebar = document.getElementById('sidebar');
-const docsList = document.getElementById('docs-list');
+const get = (id) => document.getElementById(id);
+const editor = get('editor');
+const sidebar = get('sidebar');
+const docsList = get('docs-list');
+const newBtn = get('new-doc-btn');
+const exportBtn = get('export-json-btn');
+const writeBtn = get('write-mode-btn');
+const editBtn = get('edit-mode-btn');
+const editModal = get('edit-modal');
+const editPhraseElem = get('edit-phrase');
+const editPhraseInput = get('edit-phrase-input');
+const editConfirmBtn = get('edit-confirm-btn');
+const timerSpan = get('timer');
 
-// --- Red Flash Overlay ---
-let flashTimeout = null;
-function showRedFlash() {
-  // Create overlay if not present
-  let flash = document.getElementById('red-flash-overlay');
-  if (!flash) {
-    flash = document.createElement('div');
-    flash.id = 'red-flash-overlay';
-    flash.style.position = 'fixed';
-    flash.style.top = '0';
-    flash.style.left = '0';
-    flash.style.width = '100vw';
-    flash.style.height = '100vh';
-    flash.style.background = 'rgba(255,0,0,0.7)';
-    flash.style.zIndex = '9999';
-    flash.style.pointerEvents = 'none';
-    document.body.appendChild(flash);
-  }
-  flash.style.display = 'block';
-  // Hide after 150ms
-  if (flashTimeout) clearTimeout(flashTimeout);
-  flashTimeout = setTimeout(() => {
-    flash.style.display = 'none';
-  }, 150);
-}
+// --- Timer State ---
+let timerInterval = null;
+let currentEditPhrase = '';
 
-// --- Edit Mode Flow ---
-
-// Phrases for confirmation modal
+// --- Phrases for Edit Modal (as per PRD) ---
 const editPhrases = [
   'I will edit with intention',
   'No accidental changes',
@@ -49,267 +34,51 @@ const editPhrases = [
   'Proceed to edit'
 ];
 
-const writeBtn = document.getElementById('write-mode-btn');
-const editBtn = document.getElementById('edit-mode-btn');
-const editModal = document.getElementById('edit-modal');
-const editPhraseElem = document.getElementById('edit-phrase');
-const editPhraseInput = document.getElementById('edit-phrase-input');
-const editConfirmBtn = document.getElementById('edit-confirm-btn');
+// =============================================================================
+// == 1. RENDER & UI UPDATE FUNCTIONS
+// =============================================================================
 
-let currentEditPhrase = '';
-
-// --- Show Edit Confirmation Modal ---
-function showEditModal() {
-  // Pick a random phrase
-  const idx = Math.floor(Math.random() * editPhrases.length);
-  currentEditPhrase = editPhrases[idx];
-  editPhraseElem.textContent = currentEditPhrase;
-  editPhraseInput.value = '';
-  editConfirmBtn.disabled = true;
-  // Save modal open state and phrase index
-  saveModalState(true, idx);
-  // Show modal using Bootstrap
-  const modal = new bootstrap.Modal(editModal, { backdrop: 'static', keyboard: false });
-  modal.show();
-  // Focus trap: focus input
-  setTimeout(() => editPhraseInput.focus(), 200);
-}
-
-// --- Handle Edit Phrase Input ---
-editPhraseInput && editPhraseInput.addEventListener('input', () => {
-  if (editPhraseInput.value === currentEditPhrase) {
-    editConfirmBtn.disabled = false;
-  } else {
-    editConfirmBtn.disabled = true;
-  }
-});
-
-// --- Confirm Edit: Switch to Edit mode ---
-editConfirmBtn && editConfirmBtn.addEventListener('click', () => {
-  const doc = docs.find(d => d.id === appState.docId);
-  if (doc) {
-    doc.mode = 'edit';
-    saveState();
-    renderModeButtons();
-    // Hide modal
-    const modal = bootstrap.Modal.getInstance(editModal);
-    modal && modal.hide();
-    // Save modal state after successful edit
-    saveModalState(false, appState.editPhraseIndex);
-  }
-});
-
-// --- Write Button: Switch to Write mode (no lock restart) ---
-writeBtn && writeBtn.addEventListener('click', () => {
-  const doc = docs.find(d => d.id === appState.docId);
-  if (doc && doc.mode !== 'write') {
-    doc.mode = 'write';
-    saveState();
-    renderModeButtons();
-    // Close modal state when switching modes
-    closeModalState();
-  }
-});
-
-// --- Edit Button: Show modal if allowed ---
-editBtn && editBtn.addEventListener('click', () => {
-  const doc = docs.find(d => d.id === appState.docId);
-  if (!doc) return;
-  // For now, always allow (timer/lock logic will be added later)
-  if (doc.mode !== 'edit') {
-    showEditModal();
-  }
-});
-
-// --- Render mode buttons (active state) ---
-function renderModeButtons() {
-  const doc = docs.find(d => d.id === appState.docId);
-  if (!doc) return;
-  if (doc.mode === 'write') {
-    writeBtn.classList.add('active');
-    editBtn.classList.remove('active');
-    editor.classList.remove('edit-mode');
-    editor.classList.add('write-mode');
-  } else {
-    writeBtn.classList.remove('active');
-    editBtn.classList.add('active');
-    editor.classList.remove('write-mode');
-    editor.classList.add('edit-mode');
-  }
-}
-
-// --- Docs CRUD (Sidebar, New, Select, Copy) ---
-
-// Render the sidebar doc list (up to 20 docs)
+/**
+ * Renders the list of documents in the sidebar.
+ * Disables "+ New" button if doc limit is reached.
+ */
 function renderDocsList() {
   docsList.innerHTML = '';
-  docs.slice(0, 20).forEach(doc => {
-    // Sidebar title = first non-empty line, trimmed, >24 chars truncated
-    const title = doc.title;
-    // msWrite/msEdit display (placeholder for now)
-    const msWriteMin = Math.round((doc.msWrite || 0) / 60000);
-    const msEditMin = Math.round((doc.msEdit || 0) / 60000);
-    // Doc row
+  State.docs.slice(0, 20).forEach(doc => {
+    const title = doc.title || 'Untitled';
+    const isActive = doc.id === State.appState.docId;
+
     const li = document.createElement('li');
-    li.className = 'list-group-item d-flex align-items-center justify-content-between';
+    li.className = `list-group-item d-flex align-items-center justify-content-between ${isActive ? 'active' : ''}`;
     li.tabIndex = 0;
     li.setAttribute('role', 'button');
     li.setAttribute('aria-label', `Select document: ${title}`);
-    if (doc.id === appState.docId) li.classList.add('active');
-    // Title and times
+    li.dataset.docId = doc.id;
+
+    // Doc title and stats
     const infoDiv = document.createElement('div');
-    infoDiv.className = 'flex-grow-1';
-    infoDiv.innerHTML = `<span class="fw-bold">${title}</span> <span class="text-muted small ms-2">${msWriteMin}w/${msEditMin}e</span>`;
+    infoDiv.className = 'flex-grow-1 overflow-hidden';
+    infoDiv.innerHTML = `<span class="fw-bold text-truncate d-block">${title}</span>`;
+    
     // Copy button
     const copyBtn = document.createElement('button');
-    copyBtn.className = 'btn btn-sm btn-outline-secondary ms-2';
+    copyBtn.className = 'btn btn-sm btn-outline-secondary ms-2 flex-shrink-0';
     copyBtn.textContent = 'Copy';
     copyBtn.tabIndex = 0;
     copyBtn.setAttribute('aria-label', `Copy content of ${title}`);
-    copyBtn.addEventListener('click', e => {
-      e.stopPropagation();
-      navigator.clipboard.writeText(doc.content || '').then(() => {
-        copyBtn.textContent = 'Copied!';
-        setTimeout(() => { copyBtn.textContent = 'Copy'; }, 1000);
-      });
-    });
-    // Select doc on click
-    li.addEventListener('click', () => {
-      if (appState.docId !== doc.id) {
-        appState.docId = doc.id;
-        saveState();
-        renderActiveDoc();
-        renderDocsList();
-        // Close modal state when switching docs
-        closeModalState();
-      }
-    });
-    // Keyboard select
-    li.addEventListener('keydown', e => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        li.click();
-      }
-    });
+    
     li.appendChild(infoDiv);
     li.appendChild(copyBtn);
     docsList.appendChild(li);
   });
-  // Disable '+ New' if at limit
-  const newBtn = document.getElementById('new-doc-btn');
-  if (docs.length >= 20) {
-    newBtn.disabled = true;
-    newBtn.title = 'Maximum 20 documents';
-  } else {
-    newBtn.disabled = false;
-    newBtn.title = '';
-  }
+  newBtn.disabled = State.docs.length >= 20;
 }
 
-// '+ New' button handler
-const newBtn = document.getElementById('new-doc-btn');
-newBtn && newBtn.addEventListener('click', () => {
-  if (docs.length < 20) {
-    createDoc();
-    renderDocsList();
-    renderActiveDoc();
-  }
-});
-
-// --- Update renderActiveDoc to update doc title and sidebar live ---
-const origRenderActiveDoc2 = renderActiveDoc;
-renderActiveDoc = function() {
-  origRenderActiveDoc2();
-  // Update doc title from content
-  const doc = docs.find(d => d.id === appState.docId);
-  if (doc) {
-    // Extract title from content
-    import('./stateManager.js').then(sm => {
-      const newTitle = sm.extractTitle(editor.value);
-      if (doc.title !== newTitle) {
-        doc.title = newTitle;
-        saveState();
-        renderDocsList();
-      }
-    });
-  }
-  renderModeButtons && renderModeButtons();
-};
-
-// --- Update sidebar titles live as user types ---
-editor && editor.addEventListener('input', () => {
-  renderActiveDoc();
-});
-
-// --- Persistence & Restore ---
-
-// Save modal state and edit phrase index to appState
-function saveModalState(isOpen, phraseIdx) {
-  appState.editModalOpen = isOpen;
-  appState.editPhraseIndex = phraseIdx;
-  saveState();
-}
-
-// Restore modal state on load
-function restoreModalState() {
-  if (appState.editModalOpen) {
-    // Restore the phrase
-    currentEditPhrase = editPhrases[appState.editPhraseIndex] || editPhrases[0];
-    editPhraseElem.textContent = currentEditPhrase;
-    editPhraseInput.value = '';
-    editConfirmBtn.disabled = true;
-    // Show modal using Bootstrap
-    const modal = new bootstrap.Modal(editModal, { backdrop: 'static', keyboard: false });
-    modal.show();
-    setTimeout(() => editPhraseInput.focus(), 200);
-  }
-}
-
-// Patch showEditModal to save modal state
-const origShowEditModal = showEditModal;
-showEditModal = function() {
-  const idx = Math.floor(Math.random() * editPhrases.length);
-  currentEditPhrase = editPhrases[idx];
-  editPhraseElem.textContent = currentEditPhrase;
-  editPhraseInput.value = '';
-  editConfirmBtn.disabled = true;
-  // Save modal open state and phrase index
-  saveModalState(true, idx);
-  // Show modal using Bootstrap
-  const modal = new bootstrap.Modal(editModal, { backdrop: 'static', keyboard: false });
-  modal.show();
-  setTimeout(() => editPhraseInput.focus(), 200);
-};
-
-// Patch modal close to save state
-editConfirmBtn && editConfirmBtn.addEventListener('click', () => {
-  saveModalState(false, appState.editPhraseIndex);
-});
-
-// Also close modal state if user switches doc or mode
-function closeModalState() {
-  appState.editModalOpen = false;
-  saveState();
-}
-
-// On doc select, close modal state
-// (Patch doc select in renderDocsList)
-// ...in renderDocsList, after selecting doc:
-// closeModalState();
-// (Already handled in doc select logic if needed)
-
-// --- On page load, restore everything ---
-document.addEventListener('DOMContentLoaded', () => {
-  loadState();
-  ensureFirstDoc();
-  renderDocsList();
-  renderActiveDoc();
-  restoreModalState();
-});
-
-// --- Render the active document in the textarea ---
+/**
+ * Renders the content and state of the currently active document.
+ */
 function renderActiveDoc() {
-  // Find the active doc
-  const doc = docs.find(d => d.id === appState.docId);
+  const doc = State.docs.find(d => d.id === State.appState.docId);
   if (!doc) {
     editor.value = '';
     editor.disabled = true;
@@ -317,188 +86,302 @@ function renderActiveDoc() {
   }
   editor.value = doc.content;
   editor.disabled = false;
-}
-
-// --- Block destructive keys in Write mode ---
-function handleEditorKeydown(e) {
-  // Only block in Write mode
-  const doc = docs.find(d => d.id === appState.docId);
-  if (!doc || doc.mode !== 'write') return;
-  // Block Backspace, Delete
-  if (["Backspace", "Delete"].includes(e.key)) {
-    e.preventDefault();
-    showRedFlash();
-    return;
-  }
-}
-
-// --- Block Cut (Ctrl+X or context menu) in Write mode ---
-function handleEditorCut(e) {
-  const doc = docs.find(d => d.id === appState.docId);
-  if (!doc || doc.mode !== 'write') return;
-  e.preventDefault();
-  showRedFlash();
-}
-
-// --- Block destructive beforeinput events (for mobile/IME) ---
-function handleEditorBeforeInput(e) {
-  const doc = docs.find(d => d.id === appState.docId);
-  if (!doc || doc.mode !== 'write') return;
-  if (["deleteContentBackward", "deleteContentForward", "deleteByCut"].includes(e.inputType)) {
-    e.preventDefault();
-    showRedFlash();
-  }
-}
-
-// --- Initial load: ensure at least one doc exists ---
-function ensureFirstDoc() {
-  if (docs.length === 0) {
-    createDoc();
-  }
-}
-
-// --- Main initialization ---
-function init() {
-  // Load state from localStorage
-  loadState();
-  // Ensure at least one doc exists
-  ensureFirstDoc();
-  // Render the active doc
-  renderActiveDoc();
-  // Attach event listeners for Write mode blocking
-  editor.addEventListener('keydown', handleEditorKeydown);
-  editor.addEventListener('cut', handleEditorCut);
-  editor.addEventListener('beforeinput', handleEditorBeforeInput);
-}
-
-document.addEventListener('DOMContentLoaded', init);
-
-// --- Export JSON ---
-const exportBtn = document.getElementById('export-json-btn');
-exportBtn && exportBtn.addEventListener('click', () => {
-  // Format date as YYYYMMDD
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, '0');
-  const d = String(now.getDate()).padStart(2, '0');
-  const filename = `no-bullshit-writer-export-${y}${m}${d}.json`;
-  // Create JSON blob of all docs
-  const json = JSON.stringify(docs, null, 2);
-  const blob = new Blob([json], { type: 'application/json' });
-  // Create a temporary link and trigger download
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(() => {
-    document.body.removeChild(a);
-    URL.revokeObjectURL(a.href);
-  }, 100);
-});
-
-// --- Troubleshooting tips (in comments) ---
-// - If you see 'Cannot read property ... of null', check that the DOM is loaded and IDs match.
-// - If red flash does not appear, check CSS z-index and overlay creation logic.
-// - If destructive keys are not blocked, ensure doc.mode is 'write' and event listeners are attached.
-// - If modal does not appear, check Bootstrap JS is loaded and modal markup matches.
-// - If Confirm button never enables, check phrase input logic and event listeners.
-// - If mode does not switch, check doc.mode and saveState calls. 
-// - If state does not persist, check localStorage usage and browser settings.
-// - If modal does not restore, check appState.editModalOpen and phrase index.
-// - If active doc is not restored, check appState.docId and docs array. 
-// - If download does not start, check browser download settings and pop-up blockers.
-// - If file is empty, check docs array and JSON.stringify logic. 
-
-// --- Timer Logic and Lock Enforcement ---
-let timerInterval = null;
-let timerPaused = false;
-
-// Format ms as mm:ss
-function formatMs(ms) {
-  const m = Math.floor(ms / 60000);
-  const s = Math.floor((ms % 60000) / 1000);
-  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-}
-
-// Update the timer display
-function updateTimerUI() {
-  const doc = docs.find(d => d.id === appState.docId);
-  const timerSpan = document.getElementById('timer');
-  if (!doc || !timerSpan) return;
-  timerSpan.textContent = formatMs(doc.remainingMs || 0);
-  // Set color to green if lock expired
-  if (doc.lockActive === false) {
-    timerSpan.style.color = 'green';
-  } else {
-    timerSpan.style.color = '';
-  }
-}
-
-// Start the timer interval
-function startTimer() {
-  clearInterval(timerInterval);
-  timerInterval = setInterval(() => {
-    const doc = docs.find(d => d.id === appState.docId);
-    if (!doc || !doc.lockActive || timerPaused) return;
-    const now = Date.now();
-    const end = doc.writeLockStarted + 300000;
-    doc.remainingMs = Math.max(0, end - now);
-    if (doc.remainingMs === 0) {
-      doc.lockActive = false;
-      saveState();
-      updateTimerUI();
-      clearInterval(timerInterval);
-      renderModeButtons();
-      return;
-    }
-    saveState();
-    updateTimerUI();
-  }, 500);
-}
-
-// --- Patch renderActiveDoc to start timer and update UI ---
-const origRenderActiveDoc3 = renderActiveDoc;
-renderActiveDoc = function() {
-  origRenderActiveDoc3();
-  startTimer();
+  renderModeUI();
   updateTimerUI();
-  renderModeButtons && renderModeButtons();
-};
+  startTimer();
+}
 
-// --- Patch doc select and doc create to start timer ---
-// Already handled by renderActiveDoc above
-
-// --- Patch renderModeButtons to disable Edit if lockActive ---
-function renderModeButtons() {
-  const doc = docs.find(d => d.id === appState.docId);
+/**
+ * Updates UI elements based on the current mode (Write/Edit).
+ * Toggles body class for theming and button states for lock enforcement.
+ */
+function renderModeUI() {
+  const doc = State.docs.find(d => d.id === State.appState.docId);
   if (!doc) return;
-  if (doc.mode === 'write') {
-    writeBtn.classList.add('active');
-    editBtn.classList.remove('active');
-    editor.classList.remove('edit-mode');
-    editor.classList.add('write-mode');
-  } else {
-    writeBtn.classList.remove('active');
-    editBtn.classList.add('active');
-    editor.classList.remove('write-mode');
-    editor.classList.add('edit-mode');
-  }
-  // Disable Edit button if lockActive
+
+  const isWrite = doc.mode === 'write';
+  document.body.classList.toggle('write-mode', isWrite);
+  document.body.classList.toggle('edit-mode', !isWrite);
+  writeBtn.classList.toggle('active', isWrite);
+  editBtn.classList.toggle('active', !isWrite);
+
+  // Enforce 5-minute lock on the Edit button
   if (doc.lockActive) {
     editBtn.disabled = true;
-    editBtn.title = 'Edit unlocks after 5:00';
+    editBtn.title = 'Edit unlocks after 5 minutes';
   } else {
     editBtn.disabled = false;
     editBtn.title = '';
   }
 }
 
-// --- Patch Edit button handler to enforce lock ---
-editBtn && editBtn.addEventListener('click', () => {
-  const doc = docs.find(d => d.id === appState.docId);
-  if (!doc || doc.lockActive) return;
-  if (doc.mode !== 'edit') {
-    showEditModal();
+// =============================================================================
+// == 2. TIMER LOGIC
+// =============================================================================
+
+/**
+ * Formats milliseconds into a mm:ss string.
+ */
+function formatMs(ms) {
+  const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+  const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+  const seconds = String(totalSeconds % 60).padStart(2, '0');
+  return `${minutes}:${seconds}`;
+}
+
+/**
+ * Updates the timer display in the UI.
+ * Colors timer green if lock has expired.
+ */
+function updateTimerUI() {
+  const doc = State.docs.find(d => d.id === State.appState.docId);
+  if (!doc || !timerSpan) return;
+
+  timerSpan.textContent = formatMs(doc.remainingMs);
+  timerSpan.style.color = doc.lockActive ? '' : 'green';
+}
+
+/**
+ * Starts the master timer interval if the active doc is locked.
+ */
+function startTimer() {
+  clearInterval(timerInterval);
+  const doc = State.docs.find(d => d.id === State.appState.docId);
+  if (!doc || !doc.lockActive) {
+    updateTimerUI();
+    return;
   }
-}); 
+
+  timerInterval = setInterval(() => {
+    const currentDoc = State.docs.find(d => d.id === State.appState.docId);
+    if (!currentDoc || !currentDoc.lockActive) {
+      clearInterval(timerInterval);
+      return;
+    }
+
+    const elapsed = Date.now() - currentDoc.writeLockStarted;
+    currentDoc.remainingMs = Math.max(0, 300000 - elapsed);
+    
+    if (currentDoc.remainingMs === 0) {
+      currentDoc.lockActive = false;
+      clearInterval(timerInterval);
+      renderModeUI();
+    }
+    
+    State.saveState();
+    updateTimerUI();
+  }, 500);
+}
+
+// =============================================================================
+// == 3. EVENT HANDLERS
+// =============================================================================
+
+/**
+ * Handles all keydown events on the editor.
+ * Blocks destructive keys in Write mode and shows a red flash.
+ */
+function handleEditorKeydown(e) {
+  const doc = State.docs.find(d => d.id === State.appState.docId);
+  if (doc && doc.mode === 'write' && ['Backspace', 'Delete'].includes(e.key)) {
+    e.preventDefault();
+    showRedFlash();
+  }
+}
+
+/**
+ * Handles the 'cut' event on the editor.
+ */
+function handleEditorCut(e) {
+  const doc = State.docs.find(d => d.id === State.appState.docId);
+  if (doc && doc.mode === 'write') {
+    e.preventDefault();
+    showRedFlash();
+  }
+}
+
+/**
+ * Handles the 'input' event, which fires on any content change.
+ * Updates the doc content and title in the state.
+ */
+function handleEditorInput() {
+  const doc = State.docs.find(d => d.id === State.appState.docId);
+  if (!doc) return;
+
+  doc.content = editor.value;
+  const newTitle = State.extractTitle(doc.content);
+  
+  if (newTitle !== doc.title) {
+    doc.title = newTitle;
+    renderDocsList(); // Re-render sidebar if title changed
+  }
+  
+  doc.updated = Date.now();
+  State.saveState();
+}
+
+/**
+ * Shows a full-viewport red flash for 150ms.
+ */
+function showRedFlash() {
+  let flash = document.getElementById('red-flash-overlay');
+  if (!flash) {
+    flash = document.createElement('div');
+    flash.id = 'red-flash-overlay';
+    flash.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(255,0,0,0.7);z-index:9999;pointer-events:none;display:none;';
+    document.body.appendChild(flash);
+  }
+  flash.style.display = 'block';
+  setTimeout(() => { flash.style.display = 'none'; }, 150);
+}
+
+/**
+ * Handles clicks within the sidebar, delegating to doc selection or copy.
+ */
+function handleSidebarClick(e) {
+  const docItem = e.target.closest('li[data-doc-id]');
+  const copyBtn = e.target.closest('button');
+
+  if (copyBtn && docItem) {
+    e.stopPropagation();
+    const docId = docItem.dataset.docId;
+    const doc = State.docs.find(d => d.id === docId);
+    if (doc) {
+      navigator.clipboard.writeText(doc.content).then(() => {
+        copyBtn.textContent = 'Copied!';
+        setTimeout(() => { copyBtn.textContent = 'Copy'; }, 1000);
+      });
+    }
+    return;
+  }
+
+  if (docItem) {
+    const docId = docItem.dataset.docId;
+    if (docId !== State.appState.docId) {
+      State.selectDoc(docId);
+      renderActiveDoc();
+      renderDocsList();
+    }
+  }
+}
+
+/**
+ * Handles showing the edit confirmation modal.
+ */
+function handleShowEditModal() {
+  const doc = State.docs.find(d => d.id === State.appState.docId);
+  if (!doc || doc.lockActive || doc.mode === 'edit') return;
+
+  const idx = Math.floor(Math.random() * editPhrases.length);
+  currentEditPhrase = editPhrases[idx];
+  editPhraseElem.textContent = currentEditPhrase;
+  editPhraseInput.value = '';
+  editConfirmBtn.disabled = true;
+
+  const modal = new bootstrap.Modal(editModal);
+  modal.show();
+}
+
+/**
+ * Handles confirming the edit modal and switching to Edit mode.
+ */
+function handleConfirmEdit() {
+  const doc = State.docs.find(d => d.id === State.appState.docId);
+  if (doc) {
+    doc.mode = 'edit';
+    State.saveState();
+    renderModeUI();
+    const modal = bootstrap.Modal.getInstance(editModal);
+    modal.hide();
+  }
+}
+
+/**
+ * Handles browser tab visibility changes to pause/resume the timer.
+ * This ensures the 5-minute lock only counts down when the user can see the page.
+ */
+function handleVisibilityChange() {
+  const doc = State.docs.find(d => d.id === State.appState.docId);
+  if (!doc) return;
+
+  // Tab is hidden: pause the timer
+  if (document.hidden) {
+    // We already save remainingMs continuously, so we just need to stop the interval
+    clearInterval(timerInterval);
+  } 
+  // Tab is visible: resume the timer
+  else {
+    // Recalculate writeLockStarted to correctly resume from where it left off
+    if (doc.lockActive) {
+      const remaining = doc.remainingMs || 0;
+      doc.writeLockStarted = Date.now() - (300000 - remaining);
+      startTimer();
+    }
+  }
+}
+
+// =============================================================================
+// == 4. APP INITIALIZATION
+// =============================================================================
+
+/**
+ * Main app initializer.
+ */
+function init() {
+  // Load state from localStorage
+  State.loadState();
+  
+  // Auto-create first doc if none exist
+  if (State.docs.length === 0) {
+    State.createDoc();
+  }
+  
+  // Attach all event listeners
+  editor.addEventListener('keydown', handleEditorKeydown);
+  editor.addEventListener('cut', handleEditorCut);
+  editor.addEventListener('input', handleEditorInput);
+  
+  docsList.addEventListener('click', handleSidebarClick);
+  
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+  
+  newBtn.addEventListener('click', () => {
+    State.createDoc();
+    renderDocsList();
+    renderActiveDoc();
+  });
+  
+  exportBtn.addEventListener('click', () => {
+    const json = JSON.stringify(State.docs, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `no-bullshit-writer-export-${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+  
+  writeBtn.addEventListener('click', () => {
+    const doc = State.docs.find(d => d.id === State.appState.docId);
+    if (doc && doc.mode !== 'write') {
+      doc.mode = 'write';
+      State.saveState();
+      renderModeUI();
+    }
+  });
+
+  editBtn.addEventListener('click', handleShowEditModal);
+  editConfirmBtn.addEventListener('click', handleConfirmEdit);
+  
+  editPhraseInput.addEventListener('input', () => {
+    editConfirmBtn.disabled = editPhraseInput.value !== currentEditPhrase;
+  });
+
+  // Initial render
+  renderDocsList();
+  renderActiveDoc();
+}
+
+// Start the app once the DOM is ready
+document.addEventListener('DOMContentLoaded', init); 
