@@ -362,10 +362,15 @@ Create your own document by clicking "+ New" in the sidebar, or simply delete th
   State.loadState();
   
   if (State.docs.length === 0) {
-    // On first ever load, create the 3 initial documents
-    State.createDoc(); // Blank Doc 2
-    State.createDoc(); // Blank Doc 1
-    State.createDoc(TUTORIAL_TEXT); // Tutorial doc, becomes active
+    // On first ever load, create the 3 initial documents in memory
+    const doc1 = State.createDoc(TUTORIAL_TEXT);
+    const doc2 = State.createDoc();
+    const doc3 = State.createDoc();
+    
+    // Manually construct the state and save it exactly once
+    State.docs.push(doc3, doc2, doc1);
+    State.appState.docId = doc1.id; // Make the tutorial document active
+    State.saveState();
   } else {
     // If docs already exist, ensure one is active (for robustness)
     if (!State.appState.docId || !State.docs.find(d => d.id === State.appState.docId)) {
@@ -383,7 +388,7 @@ Create your own document by clicking "+ New" in the sidebar, or simply delete th
   newBtn.addEventListener('click', () => {
     // A guard to prevent creating more docs than the limit, in case the button is not hidden
     if (State.docs.length >= 3) return;
-    State.createDoc();
+    State.addNewDocument();
     renderDocsList();
     renderActiveDoc();
   });

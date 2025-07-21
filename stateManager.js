@@ -54,10 +54,14 @@ export function extractTitle(content) {
   return trimmed.length > 24 ? trimmed.slice(0, 24) + '…' : trimmed;
 }
 
-// --- Create a new document ---
+/**
+ * Creates a new document object without any side effects (pure function).
+ * @param {string} content The initial content of the document.
+ * @returns {object} A new document object.
+ */
 export function createDoc(content = '') {
   const now = Date.now();
-  const newDoc = {
+  return {
     id: uuidv4(),
     title: extractTitle(content) || 'Untitled',
     content: content,
@@ -70,10 +74,18 @@ export function createDoc(content = '') {
     created: now,
     updated: now
   };
-  docs.unshift(newDoc); // add to start
+}
+
+/**
+ * Creates a new document, adds it to the state, and saves.
+ * This is the impure version used by UI actions.
+ * @param {string} content The initial content of the document.
+ */
+export function addNewDocument(content = '') {
+  const newDoc = createDoc(content);
+  docs.unshift(newDoc);
   appState.docId = newDoc.id;
   saveState();
-  return newDoc;
 }
 
 // --- Select a document by ID ---
@@ -105,7 +117,7 @@ export function deleteDoc(docId) {
       selectDoc(docs[newIndex].id);
     } else {
       // If no docs are left, create a new one
-      createDoc();
+      addNewDocument();
     }
   }
 
