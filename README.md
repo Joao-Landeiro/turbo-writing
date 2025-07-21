@@ -1,4 +1,4 @@
-# No Bullshit Writer
+# Turbo Writer
 
 A distraction-free browser-based writing pad with enforced Write/Edit modes. 100% client-side, modular, and built with vanilla JS/HTML/CSS. See PRD.Md for requirements.
 

@@ -379,7 +379,7 @@ function init() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `no-bullshit-writer-export-${new Date().toISOString().slice(0,10)}.json`;
+    a.download = `turbo-writer-export-${new Date().toISOString().slice(0,10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
   });
