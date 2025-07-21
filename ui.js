@@ -348,7 +348,9 @@ function handleVisibilityChange() {
  * Main app initializer.
  */
 function init() {
-  const TUTORIAL_TEXT = `This is a simple space to help you write without distraction. It works in two modes: Writing and Editing.
+  const TUTORIAL_TEXT = `How to use this
+
+This is a simple space to help you write without distraction. It works in two modes: Writing and Editing.
 Right now, you are in **Writing Mode**.
 Your only job is to get your ideas down. 
 You cannot delete, backspace, or cut text. 
@@ -363,13 +365,17 @@ Create your own document by clicking "+ New" in the sidebar, or simply delete th
   
   if (State.docs.length === 0) {
     // On first ever load, create the 3 initial documents in memory
-    const doc1 = State.createDoc(TUTORIAL_TEXT);
-    const doc2 = State.createDoc();
-    const doc3 = State.createDoc();
+    const tutorialDoc = State.createDoc(TUTORIAL_TEXT);
+    const blankDoc1 = State.createDoc();
+    const blankDoc2 = State.createDoc();
     
     // Manually construct the state and save it exactly once
-    State.docs.push(doc3, doc2, doc1);
-    State.appState.docId = doc1.id; // Make the tutorial document active
+    // Use unshift to place the tutorial doc at the top of the list.
+    State.docs.unshift(blankDoc2);
+    State.docs.unshift(blankDoc1);
+    State.docs.unshift(tutorialDoc);
+
+    State.appState.docId = tutorialDoc.id; // Make the tutorial document active
     State.saveState();
   } else {
     // If docs already exist, ensure one is active (for robustness)
