@@ -75,10 +75,9 @@ body.edit-mode, .edit-mode #editor {
   background: rgba(255, 0, 0, 0.7);
   z-index: 9999;
   pointer-events: none;
-  display: none; /* Toggled by JS */
+  display: none; /* This is toggled by JS */
   
   /* Flexbox properties for centering the text */
-  display: flex;
   justify-content: center;
   align-items: center;
 
