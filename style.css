@@ -59,9 +59,37 @@ body.edit-mode, .edit-mode #editor {
   transition: none; /* Disable transitions during progress update for smoothness */
 }
 
+/* --- App Description Text Size --- */
+#sidebar .small {
+  font-size: 0.8rem; /* Approx 10pt for a more subtle look */
+  line-height: 1.4;
+}
+
 /* --- Red Flash Overlay --- */
 #red-flash-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(255, 0, 0, 0.7);
+  z-index: 9999;
+  pointer-events: none;
+  display: none; /* Toggled by JS */
+  
+  /* Flexbox properties for centering the text */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
   transition: opacity 0.1s;
+}
+
+#red-flash-overlay span {
+  color: white;
+  font-size: 2.5rem;
+  font-weight: bold;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
 }
 
 /* --- Troubleshooting tips (in comments) --- */

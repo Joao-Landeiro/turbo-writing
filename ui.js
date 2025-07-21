@@ -240,10 +240,14 @@ function showRedFlash() {
   if (!flash) {
     flash = document.createElement('div');
     flash.id = 'red-flash-overlay';
-    flash.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(255,0,0,0.7);z-index:9999;pointer-events:none;display:none;';
+    
+    const message = document.createElement('span');
+    message.textContent = 'Not in Edit Mode';
+    flash.appendChild(message);
+    
     document.body.appendChild(flash);
   }
-  flash.style.display = 'block';
+  flash.style.display = 'flex'; // Use flex to enable centering
   setTimeout(() => { flash.style.display = 'none'; }, 150);
 }
 
@@ -362,6 +366,18 @@ function init() {
   
   docsList.addEventListener('click', handleSidebarClick);
   
+  deleteBtn.addEventListener('click', () => {
+    const doc = State.docs.find(d => d.id === State.appState.docId);
+    if (!doc) return;
+
+    // Use a confirmation prompt before deleting
+    if (window.confirm(`Are you sure you want to delete the document "${doc.title || 'Untitled'}"? This cannot be undone.`)) {
+      State.deleteDoc(doc.id);
+      renderDocsList();
+      renderActiveDoc();
+    }
+  });
+
   exportBtn.addEventListener('click', () => {
     let exportContent = `Turbo Writer Export\nDate: ${new Date().toLocaleString()}\n\n`;
 
