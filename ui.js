@@ -379,11 +379,9 @@ Create your own document by clicking "+ New" in the sidebar, or simply delete th
     const blankDoc1 = State.createDoc();
     const blankDoc2 = State.createDoc();
     
-    // Manually construct the state and save it exactly once
-    // Use unshift to place the tutorial doc at the top of the list.
-    State.docs.unshift(blankDoc2);
-    State.docs.unshift(blankDoc1);
-    State.docs.unshift(tutorialDoc);
+    // Manually construct the state and save it exactly once.
+    // This explicit order ensures the tutorial is at the top.
+    State.docs = [tutorialDoc, blankDoc1, blankDoc2];
 
     State.appState.docId = tutorialDoc.id; // Make the tutorial document active
     State.saveState();
