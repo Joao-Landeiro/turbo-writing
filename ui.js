@@ -73,7 +73,8 @@ function renderDocsList() {
     li.appendChild(copyBtn);
     docsList.appendChild(li);
   });
-  newBtn.disabled = State.docs.length >= 20;
+  // Hide the "+ New" button if the document limit is reached
+  newBtn.classList.toggle('d-none', State.docs.length >= 3);
 }
 
 /**
@@ -350,9 +351,11 @@ function init() {
   // Load state from localStorage
   State.loadState();
   
-  // Auto-create first doc if none exist
+  // On first ever load, create the 3 initial documents
   if (State.docs.length === 0) {
-    State.createDoc();
+    for (let i = 0; i < 3; i++) {
+      State.createDoc();
+    }
   } 
   // If docs exist but none are active (or activeId is invalid), activate the first one.
   else if (!State.appState.docId || !State.docs.find(d => d.id === State.appState.docId)) {
@@ -365,6 +368,14 @@ function init() {
   editor.addEventListener('input', handleEditorInput);
   
   docsList.addEventListener('click', handleSidebarClick);
+  
+  newBtn.addEventListener('click', () => {
+    // A guard to prevent creating more docs than the limit, in case the button is not hidden
+    if (State.docs.length >= 3) return;
+    State.createDoc();
+    renderDocsList();
+    renderActiveDoc();
+  });
   
   deleteBtn.addEventListener('click', () => {
     const doc = State.docs.find(d => d.id === State.appState.docId);
@@ -397,12 +408,6 @@ function init() {
     a.download = `turbo-writer-export-${new Date().toISOString().slice(0,10)}.txt`;
     a.click();
     URL.revokeObjectURL(url);
-  });
-  
-  newBtn.addEventListener('click', () => {
-    State.createDoc();
-    renderDocsList();
-    renderActiveDoc();
   });
   
   writeBtn.addEventListener('click', () => {
