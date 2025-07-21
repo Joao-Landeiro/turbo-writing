@@ -9,7 +9,7 @@ const editor = get('editor');
 const sidebar = get('sidebar');
 const docsList = get('docs-list');
 const newBtn = get('new-doc-btn');
-const exportBtn = get('export-json-btn');
+const exportBtn = get('export-txt-btn');
 const writeBtn = get('write-mode-btn');
 const editBtn = get('edit-mode-btn');
 const editModal = get('edit-modal');
@@ -362,35 +362,31 @@ function init() {
   
   docsList.addEventListener('click', handleSidebarClick);
   
-  deleteBtn.addEventListener('click', () => {
-    const doc = State.docs.find(d => d.id === State.appState.docId);
-    if (!doc) return;
+  exportBtn.addEventListener('click', () => {
+    let exportContent = `Turbo Writer Export\nDate: ${new Date().toLocaleString()}\n\n`;
 
-    // Use a confirmation prompt before deleting
-    if (window.confirm(`Are you sure you want to delete the document "${doc.title || 'Untitled'}"? This cannot be undone.`)) {
-      State.deleteDoc(doc.id);
-      renderDocsList();
-      renderActiveDoc();
-    }
+    State.docs.forEach(doc => {
+      const createdDate = new Date(doc.created).toLocaleString();
+      exportContent += `==================================================\n`;
+      exportContent += `Title: ${doc.title || 'Untitled'}\n`;
+      exportContent += `Created: ${createdDate}\n`;
+      exportContent += `==================================================\n\n`;
+      exportContent += `${doc.content}\n\n\n`;
+    });
+
+    const blob = new Blob([exportContent], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `turbo-writer-export-${new Date().toISOString().slice(0,10)}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
   });
-
-  document.addEventListener('visibilitychange', handleVisibilityChange);
   
   newBtn.addEventListener('click', () => {
     State.createDoc();
     renderDocsList();
     renderActiveDoc();
-  });
-  
-  exportBtn.addEventListener('click', () => {
-    const json = JSON.stringify(State.docs, null, 2);
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `turbo-writer-export-${new Date().toISOString().slice(0,10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
   });
   
   writeBtn.addEventListener('click', () => {
