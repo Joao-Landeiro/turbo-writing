@@ -366,10 +366,11 @@ Create your own document by clicking "+ New" in the sidebar, or simply delete th
     State.createDoc(); // Blank Doc 2
     State.createDoc(); // Blank Doc 1
     State.createDoc(TUTORIAL_TEXT); // Tutorial doc, becomes active
-  } 
-  // If docs exist but none are active (or activeId is invalid), activate the first one.
-  else if (!State.appState.docId || !State.docs.find(d => d.id === State.appState.docId)) {
-    State.selectDoc(State.docs[0].id);
+  } else {
+    // If docs already exist, ensure one is active (for robustness)
+    if (!State.appState.docId || !State.docs.find(d => d.id === State.appState.docId)) {
+      State.selectDoc(State.docs[0].id);
+    }
   }
   
   // Attach all event listeners
