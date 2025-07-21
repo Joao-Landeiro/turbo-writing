@@ -41,6 +41,15 @@ const editPhrases = [
 // =============================================================================
 
 /**
+ * Master render function. Updates the entire UI based on the current state.
+ * This is the single entry point for all UI updates.
+ */
+function render() {
+  renderDocsList();
+  renderActiveDoc();
+}
+
+/**
  * Renders the list of documents in the sidebar.
  * Disables "+ New" button if doc limit is reached.
  */
@@ -79,6 +88,7 @@ function renderDocsList() {
 
 /**
  * Renders the content and state of the currently active document.
+ * This includes updating the editor, mode buttons, timer, and starting the timer logic.
  */
 function renderActiveDoc() {
   const doc = State.docs.find(d => d.id === State.appState.docId);
@@ -89,6 +99,7 @@ function renderActiveDoc() {
   }
   editor.value = doc.content;
   editor.disabled = false;
+  
   renderModeUI();
   updateTimerUI();
   startTimer();
@@ -276,8 +287,7 @@ function handleSidebarClick(e) {
     const docId = docItem.dataset.docId;
     if (docId !== State.appState.docId) {
       State.selectDoc(docId);
-      renderActiveDoc();
-      renderDocsList();
+      render(); // Use the master render function
     }
   }
 }
@@ -395,8 +405,7 @@ Create your own document by clicking "+ New" in the sidebar, or simply delete th
     // A guard to prevent creating more docs than the limit, in case the button is not hidden
     if (State.docs.length >= 3) return;
     State.addNewDocument();
-    renderDocsList();
-    renderActiveDoc();
+    render(); // Use the master render function
   });
   
   deleteBtn.addEventListener('click', () => {
@@ -406,8 +415,7 @@ Create your own document by clicking "+ New" in the sidebar, or simply delete th
     // Use a confirmation prompt before deleting
     if (window.confirm(`Are you sure you want to delete the document "${doc.title || 'Untitled'}"? This cannot be undone.`)) {
       State.deleteDoc(doc.id);
-      renderDocsList();
-      renderActiveDoc();
+      render(); // Use the master render function
     }
   });
 
@@ -449,8 +457,7 @@ Create your own document by clicking "+ New" in the sidebar, or simply delete th
   });
 
   // --- 3. Initial Render ---
-  renderDocsList();
-  renderActiveDoc();
+  render();
 }
 
 // Start the app once the DOM is ready
