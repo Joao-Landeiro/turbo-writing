@@ -55,8 +55,7 @@ function render() {
  */
 function renderDocsList() {
   docsList.innerHTML = '';
-  // Diagnostic: explicitly reverse the array before rendering
-  [...State.docs].reverse().forEach(doc => {
+  State.docs.slice(0, 20).forEach(doc => {
     const title = doc.title || 'Untitled';
     const isActive = doc.id === State.appState.docId;
 
