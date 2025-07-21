@@ -50,6 +50,15 @@ body.edit-mode, .edit-mode #editor {
   border-color: #212529 !important;
 }
 
+/* --- Progress Bar on Edit Button --- */
+#edit-mode-btn:disabled {
+  background-image: linear-gradient(to right, #28a745 var(--progress, 0%), #6c757d var(--progress, 0%));
+  background-size: 100%;
+  background-repeat: no-repeat;
+  color: white;
+  transition: none; /* Disable transitions during progress update for smoothness */
+}
+
 /* --- Red Flash Overlay --- */
 #red-flash-overlay {
   transition: opacity 0.1s;

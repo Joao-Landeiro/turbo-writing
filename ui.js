@@ -142,6 +142,15 @@ function updateTimerUI() {
   timerSpan.textContent = formatMs(doc.remainingMs);
   timerSpan.style.color = doc.lockActive ? '' : 'green';
   timerLabel.style.display = doc.lockActive ? 'inline' : 'none';
+
+  // Update the progress bar on the Edit button
+  if (doc.lockActive) {
+    const progress = (300000 - doc.remainingMs) / 300000 * 100;
+    editBtn.style.setProperty('--progress', `${progress}%`);
+  } else {
+    // When unlocked, ensure it's fully green
+    editBtn.style.setProperty('--progress', `100%`);
+  }
 }
 
 /**
