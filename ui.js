@@ -358,11 +358,11 @@ Once you can edit, you can fix typos, move paragraphs, and shape your text.
 But for now... just write.
 Create your own document by clicking "+ New" in the sidebar, or simply delete this text (once you're in Edit mode) and start fresh.`;
 
-  // Load state from localStorage
+  // --- 1. Setup State ---
   State.loadState();
   
-  // On first ever load, create the 3 initial documents
   if (State.docs.length === 0) {
+    // On first ever load, create the 3 initial documents
     State.createDoc(); // Blank Doc 2
     State.createDoc(); // Blank Doc 1
     State.createDoc(TUTORIAL_TEXT); // Tutorial doc, becomes active
@@ -373,7 +373,7 @@ Create your own document by clicking "+ New" in the sidebar, or simply delete th
     }
   }
   
-  // Attach all event listeners
+  // --- 2. Setup UI and Event Listeners ---
   editor.addEventListener('keydown', handleEditorKeydown);
   editor.addEventListener('cut', handleEditorCut);
   editor.addEventListener('input', handleEditorInput);
@@ -437,7 +437,7 @@ Create your own document by clicking "+ New" in the sidebar, or simply delete th
     editConfirmBtn.disabled = editPhraseInput.value !== currentEditPhrase;
   });
 
-  // Initial render
+  // --- 3. Initial Render ---
   renderDocsList();
   renderActiveDoc();
 }
