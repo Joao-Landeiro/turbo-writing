@@ -55,12 +55,12 @@ export function extractTitle(content) {
 }
 
 // --- Create a new document ---
-export function createDoc() {
+export function createDoc(content = '') {
   const now = Date.now();
   const newDoc = {
     id: uuidv4(),
-    title: 'Untitled',
-    content: '',
+    title: extractTitle(content) || 'Untitled',
+    content: content,
     mode: 'write',
     lockActive: true,
     writeLockStarted: now,

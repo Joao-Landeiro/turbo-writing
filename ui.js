@@ -348,14 +348,24 @@ function handleVisibilityChange() {
  * Main app initializer.
  */
 function init() {
+  const TUTORIAL_TEXT = `This is a simple space to help you write without distraction. It works in two modes: Writing and Editing.
+Right now, you are in **Writing Mode**.
+Your only job is to get your ideas down. 
+You cannot delete, backspace, or cut text. 
+Go ahead, try to delete this sentence. (See the red flash? That means it's working.)
+Notice the timer below? It's counting down for 5 minutes. After it runs out, the "Edit" button will become available. This is your dedicated time to just write.
+Once you can edit, you can fix typos, move paragraphs, and shape your text.
+But for now... just write.
+Create your own document by clicking "+ New" in the sidebar, or simply delete this text (once you're in Edit mode) and start fresh.`;
+
   // Load state from localStorage
   State.loadState();
   
   // On first ever load, create the 3 initial documents
   if (State.docs.length === 0) {
-    for (let i = 0; i < 3; i++) {
-      State.createDoc();
-    }
+    State.createDoc(); // Blank Doc 2
+    State.createDoc(); // Blank Doc 1
+    State.createDoc(TUTORIAL_TEXT); // Tutorial doc, becomes active
   } 
   // If docs exist but none are active (or activeId is invalid), activate the first one.
   else if (!State.appState.docId || !State.docs.find(d => d.id === State.appState.docId)) {
